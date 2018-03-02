@@ -95,7 +95,7 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
-class AbstractPDF2XHTML extends PDFTextStripper {
+public class AbstractPDF2XHTML extends PDFTextStripper {
 
     enum ActionTrigger {
         AFTER_DOCUMENT_PRINT,
@@ -139,9 +139,9 @@ class AbstractPDF2XHTML extends PDFTextStripper {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ROOT);
 
 
-    final List<IOException> exceptions = new ArrayList<>();
+    public final List<IOException> exceptions = new ArrayList<>();
     final PDDocument pdDocument;
-    final XHTMLContentHandler xhtml;
+    public final XHTMLContentHandler xhtml;
     private final ParseContext context;
     final Metadata metadata;
     final EmbeddedDocumentExtractor embeddedDocumentExtractor;
@@ -149,7 +149,7 @@ class AbstractPDF2XHTML extends PDFTextStripper {
 
     private int pageIndex = 0;
 
-    AbstractPDF2XHTML(PDDocument pdDocument, ContentHandler handler, ParseContext context, Metadata metadata,
+    public AbstractPDF2XHTML(PDDocument pdDocument, ContentHandler handler, ParseContext context, Metadata metadata,
                       PDFParserConfig config) throws IOException {
         this.pdDocument = pdDocument;
         this.xhtml = new XHTMLContentHandler(handler, metadata);

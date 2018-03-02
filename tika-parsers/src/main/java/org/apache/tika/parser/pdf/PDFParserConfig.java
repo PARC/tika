@@ -117,6 +117,11 @@ public class PDFParserConfig implements Serializable {
     //content from elsewhere in the document.
     private boolean ifXFAExtractOnlyXFA = false;
 
+    // Kyle 3/1/18: Ugly workaround until PDF2XHTML is made a public object and inheritable.
+    // The PDFParser class calls a static method to process the file. We need a way to 
+    // tell it to call our StyledPDF2XHTML class. Set this to true to cause it to use our class.
+    private boolean styled = false;
+
     private OCR_STRATEGY ocrStrategy = OCR_STRATEGY.NO_OCR;
 
     private int ocrDPI = 300;
@@ -235,7 +240,7 @@ public class PDFParserConfig implements Serializable {
      *
      * @param pdf2XHTML
      */
-    public void configure(PDF2XHTML pdf2XHTML) {
+    public void configure(AbstractPDF2XHTML pdf2XHTML) {
         pdf2XHTML.setSortByPosition(getSortByPosition());
         if (getEnableAutoSpace()) {
             pdf2XHTML.setWordSeparator(" ");
@@ -460,6 +465,14 @@ public class PDFParserConfig implements Serializable {
      */
     public void setSpacingTolerance(Float spacingTolerance) {
         this.spacingTolerance = spacingTolerance;
+    }
+
+    public void setStyled(boolean styled) {
+        this.styled = styled;
+    }
+
+    public boolean isStyled() {
+        return styled;
     }
 
     public AccessChecker getAccessChecker() {

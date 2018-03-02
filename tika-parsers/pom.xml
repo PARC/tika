@@ -29,7 +29,7 @@
     <relativePath>../tika-parent/pom.xml</relativePath>
   </parent>
 
-  <artifactId>tika-parsers</artifactId>
+  <artifactId>tika-parsers-parc</artifactId>
   <packaging>bundle</packaging>
   <name>Apache Tika parsers</name>
   <url>http://tika.apache.org/</url>
@@ -51,6 +51,14 @@
     <commonsexec.version>1.3</commonsexec.version>
     <httpcomponents.version>4.5.4</httpcomponents.version>
   </properties>
+
+  <distributionManagement>
+    <repository>
+        <id>chat-maven-repo-s3</id>
+        <name>CHAT Repository on S3</name>
+        <url>s3://chat-maven-repo-s3/</url>
+    </repository>
+  </distributionManagement>
 
   <dependencies>
     <!-- Optional OSGi dependency, used only when running within OSGi -->
@@ -644,6 +652,26 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+            <execution>
+                <id>attach-sources</id>
+                <goals><goal>jar</goal></goals>
+            </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <executions>
+            <execution>
+                <id>attach-javadoc</id>
+                <goals><goal>jar</goal></goals>
+            </execution>
+        </executions>
+      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -689,6 +717,13 @@
         </plugin>
       </plugins>
     </pluginManagement>
+    <extensions>
+      <extension>
+        <groupId>org.kuali.maven.wagons</groupId>
+        <artifactId>maven-s3-wagon</artifactId>
+        <version>1.2.1</version>
+      </extension>
+    </extensions>
   </build>
 
   <organization>

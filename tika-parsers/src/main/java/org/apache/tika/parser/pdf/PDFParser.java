@@ -165,7 +165,11 @@ public class PDFParser extends AbstractParser implements Initializable {
                     if (localConfig.getOcrStrategy().equals(PDFParserConfig.OCR_STRATEGY.OCR_AND_TEXT_EXTRACTION)) {
                         metadata.add("X-Parsed-By", TesseractOCRParser.class.toString());
                     }
-                    PDF2XHTML.process(pdfDocument, handler, context, metadata, localConfig);
+                    if (localConfig.isStyled()) {
+                        StyledPDF2XHTML.process(pdfDocument, handler, context, metadata, localConfig);
+                    } else {
+                        PDF2XHTML.process(pdfDocument, handler, context, metadata, localConfig);
+                    }
                 }
             }
         } catch (InvalidPasswordException e) {

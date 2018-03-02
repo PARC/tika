@@ -60,7 +60,7 @@ import org.xml.sax.helpers.AttributesImpl;
  * to produce a semi-structured XHTML SAX events instead of a plain text
  * stream.
  */
-class PDF2XHTML extends AbstractPDF2XHTML {
+public class PDF2XHTML extends AbstractPDF2XHTML {
 
 
     private static final List<String> JPEG = Arrays.asList(
@@ -86,7 +86,7 @@ class PDF2XHTML extends AbstractPDF2XHTML {
      */
     private Map<COSStream, Integer> processedInlineImages = new HashMap<>();
     private int inlineImageCounter = 0;
-    private PDF2XHTML(PDDocument document, ContentHandler handler, ParseContext context, Metadata metadata,
+    public PDF2XHTML(PDDocument document, ContentHandler handler, ParseContext context, Metadata metadata,
                       PDFParserConfig config)
             throws IOException {
         super(document, handler, context, metadata, config);
