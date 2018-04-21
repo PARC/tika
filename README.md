@@ -1,3 +1,35 @@
+February 2018
+
+PARC Changes
+===============
+
+This is a PARC-modified fork of the Apache Tika project. We needed to extend
+the PDF parsing code so that we could add our own style attributes to the XHTML
+produced by Tika. The Tika class we extended is
+`tika-parsers/src/main/java/org/apache/tika/parser/pdf/AbstractPDF2XHTML.java`,
+but in the base project the class is not public and therefore can't be
+extended. This fork changes the class to allow us to extend it, and it includes
+a new class
+`tika-parsers/src/main/java/org/apache/tika/parser/pdf/StyledPDF2XHTML.java`
+that extends it and produces the output we need. Our RFP Assistant code calls
+this new class.
+
+The changes we made can be seen here
+https://github.com/apache/tika/compare/master...PARC:v1.17_parc_fixes.
+
+In order to make the modified project available to the RFP Assistant project,
+we modified `pom.xml` to deploy the tika package to our own Maven repository.
+The RFP Assistant project dependency for Tika points to the modified project in
+our Maven repository.
+
+If you need to make additional changes to the Tika code, you should be able to
+rebuild and deploy as usual. The changed `pom.xml` will deploy your changes to
+the PARC CHAT repo. You should increase the version number both here and in the
+RFP Assistant project dependencies so that other developers will also retrieve
+the new package.
+
+
+
 Welcome to Apache Tika  <http://tika.apache.org/>
 =================================================
 
