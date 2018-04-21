@@ -14,21 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.tika.metadata;
 
-/**
- * Contains keys to properties in Metadata instances.
- */
-public interface TikaMetadataKeys {
+package org.apache.tika.parser.utils;
 
-    String RESOURCE_NAME_KEY = "resourceName";
+import org.apache.tika.exception.TikaException;
 
-    String PROTECTED = "protected";
+public class DataURISchemeParseException extends TikaException {
 
-    String EMBEDDED_RELATIONSHIP_ID = "embeddedRelationshipId";
-
-    String EMBEDDED_STORAGE_CLASS_ID = "embeddedStorageClassId";
-
-    String EMBEDDED_RESOURCE_TYPE = "embeddedResourceType";
+    public DataURISchemeParseException(String msg) {
+            super(msg);
+        }
 
 }

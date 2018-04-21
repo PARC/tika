@@ -37,8 +37,6 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.reflect.Field;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -80,6 +78,7 @@ import org.apache.tika.gui.TikaGUI;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.language.detect.LanguageHandler;
 import org.apache.tika.metadata.Metadata;
+import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.metadata.serialization.JsonMetadata;
 import org.apache.tika.metadata.serialization.JsonMetadataList;
 import org.apache.tika.mime.MediaType;
@@ -349,8 +348,6 @@ public class TikaCLI {
 
     private boolean pipeMode = true;
 
-    private boolean serverMode = false;
-
     private boolean fork = false;
 
     private boolean prettyPrint;
@@ -452,8 +449,9 @@ public class TikaCLI {
             prettyPrint = true;
         } else if (arg.equals("-p") || arg.equals("--port")
                 || arg.equals("-s") || arg.equals("--server")) {
-            serverMode = true;
-            pipeMode = false;
+            throw new IllegalArgumentException(
+                    "As of Tika 2.0, the server option is no longer supported in tika-app.\n"+
+                    "See https://wiki.apache.org/tika/TikaJAXRS for usage.");
         } else if (arg.startsWith("-c")) {
             networkURI = new URI(arg.substring("-c".length()));
         } else if (arg.startsWith("--client=")) {
@@ -462,9 +460,7 @@ public class TikaCLI {
             pipeMode = false;
             configure();
             
-            if (serverMode) {
-                new TikaServer(Integer.parseInt(arg)).start();
-            } else if (arg.equals("-")) {
+            if (arg.equals("-")) {
                 try (InputStream stream = TikaInputStream.get(
                         new CloseShieldInputStream(System.in))) {
                     type.process(stream, System.out, new Metadata());
@@ -532,7 +528,7 @@ public class TikaCLI {
     }
     private void usage() {
         PrintStream out = System.out;
-        out.println("usage: java -jar tika-app.jar [option...] [file|port...]");
+        out.println("usage: java -jar tika-app.jar [option...] [file...]");
         out.println();
         out.println("Options:");
         out.println("    -?  or --help          Print this usage message");
@@ -540,7 +536,6 @@ public class TikaCLI {
         out.println("    -V  or --version       Print the Apache Tika version number");
         out.println();
         out.println("    -g  or --gui           Start the Apache Tika GUI");
-        out.println("    -s  or --server        Start the Apache Tika server");
         out.println("    -f  or --fork          Use Fork Mode for out-of-process extraction");
         out.println();
         out.println("    --config=<tika-config.xml>");
@@ -606,12 +601,6 @@ public class TikaCLI {
         out.println("    Apache Tika GUI. You can drag and drop files from");
         out.println("    a normal file explorer to the GUI window to extract");
         out.println("    text content and metadata from the files.");
-        out.println();
-        out.println("- Server mode");
-        out.println();
-        out.println("    Use the \"--server\" (or \"-s\") option to start the");
-        out.println("    Apache Tika server. The server will listen to the");
-        out.println("    ports you specify as one or more arguments.");
         out.println();
         out.println("- Batch mode");
         out.println();
@@ -1036,12 +1025,14 @@ public class TikaCLI {
         }
 
         public void parseEmbedded(InputStream inputStream, ContentHandler contentHandler, Metadata metadata, boolean outputHtml) throws SAXException, IOException {
-            String name = metadata.get(Metadata.RESOURCE_NAME_KEY);
+            String name = metadata.get(TikaCoreProperties.RESOURCE_NAME_KEY);
 
             if (name == null) {
                 name = "file" + count++;
             }
-
+            if (! inputStream.markSupported()) {
+                inputStream = TikaInputStream.get(inputStream);
+            }
             MediaType contentType = detector.detect(inputStream, metadata);
 
             if (name.indexOf('.')==-1 && contentType!=null) {
@@ -1053,7 +1044,7 @@ public class TikaCLI {
                 }
             }
 
-            String relID = metadata.get(Metadata.EMBEDDED_RELATIONSHIP_ID);
+            String relID = metadata.get(TikaCoreProperties.EMBEDDED_RELATIONSHIP_ID);
             if (relID != null && !name.startsWith(relID)) {
                 name = relID + "_" + name;
             }
@@ -1113,66 +1104,6 @@ public class TikaCLI {
         }
     }
 
-    private class TikaServer extends Thread {
-
-        private final ServerSocket server;
-        private final int port;
-        public TikaServer(int port) throws IOException {
-            super("Tika server at port " + port);
-            server = new ServerSocket(port);
-            this.port = port;
-        }
-
-        @Override
-        public void run() {
-            System.out.println("Successfully started tika-app's server on port: "+port);
-            System.err.println("WARNING: The server option in tika-app is deprecated and will be removed ");
-            System.err.println("by Tika 2.0 if not shortly after Tika 1.14.");
-            System.err.println("Please migrate to the JAX-RS tika-server package.");
-            System.err.println("See https://wiki.apache.org/tika/TikaJAXRS for usage.");
-
-            try {
-                try {
-                    while (true) {
-                        processSocketInBackground(server.accept());
-                    }
-                } finally {
-                    server.close();
-                }
-            } catch (IOException e) { 
-                e.printStackTrace();
-            }
-        }
-
-        private void processSocketInBackground(final Socket socket) {
-            Thread thread = new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        InputStream input = null;
-                        try {
-                            InputStream rawInput = socket.getInputStream();
-                            OutputStream output = socket.getOutputStream();
-                            input = TikaInputStream.get(rawInput);
-                            type.process(input, output, new Metadata());
-                            output.flush();
-                        } finally {
-                            if (input != null) {
-                                input.close();
-                            }
-                            socket.close();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            };
-            thread.setDaemon(true);
-            thread.start();
-        }
-
-    }
-    
     private class NoDocumentMetHandler extends DefaultHandler {
 
         protected final Metadata metadata;

@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +41,8 @@ import org.apache.poi.openxml4j.opc.PackageRelationshipTypes;
 import org.apache.poi.openxml4j.opc.TargetMode;
 import org.apache.poi.openxml4j.opc.internal.FileHelper;
 import org.apache.poi.poifs.filesystem.DirectoryNode;
+import org.apache.poi.poifs.filesystem.DocumentEntry;
+import org.apache.poi.poifs.filesystem.Entry;
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
 import org.apache.poi.poifs.filesystem.Ole10Native;
 import org.apache.poi.poifs.filesystem.Ole10NativeException;
@@ -164,7 +167,7 @@ public abstract class AbstractOOXMLExtractor implements OOXMLExtractor {
                 InputStream tStream = tPart.getInputStream();
                 Metadata thumbnailMetadata = new Metadata();
                 String thumbName = tPart.getPartName().getName();
-                thumbnailMetadata.set(Metadata.RESOURCE_NAME_KEY, thumbName);
+                thumbnailMetadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, thumbName);
 
                 AttributesImpl attributes = new AttributesImpl();
                 attributes.addAttribute(XHTML, "class", "class", "CDATA", "embedded");
@@ -172,7 +175,7 @@ public abstract class AbstractOOXMLExtractor implements OOXMLExtractor {
                 handler.startElement(XHTML, "div", "div", attributes);
                 handler.endElement(XHTML, "div", "div");
 
-                thumbnailMetadata.set(Metadata.EMBEDDED_RELATIONSHIP_ID, thumbName);
+                thumbnailMetadata.set(TikaCoreProperties.EMBEDDED_RELATIONSHIP_ID, thumbName);
                 thumbnailMetadata.set(Metadata.CONTENT_TYPE, tPart.getContentType());
                 thumbnailMetadata.set(TikaCoreProperties.TITLE, tPart.getPartName().getName());
 
@@ -294,20 +297,30 @@ public abstract class AbstractOOXMLExtractor implements OOXMLExtractor {
         TikaInputStream stream = null;
         try {
             Metadata metadata = new Metadata();
-            metadata.set(Metadata.EMBEDDED_RELATIONSHIP_ID, rel);
+            metadata.set(TikaCoreProperties.EMBEDDED_RELATIONSHIP_ID, rel);
 
             DirectoryNode root = fs.getRoot();
             POIFSDocumentType type = POIFSDocumentType.detectType(root);
 
-            if (root.hasEntry("CONTENTS")
-                    && root.hasEntry("\u0001Ole")
-                    && root.hasEntry("\u0001CompObj")) {
+            if (root.hasEntry("\u0001Ole")
+                    && root.hasEntry("\u0001CompObj")
+                    && (
+                            root.hasEntry("CONTENTS") || root.hasEntry("Package")
+                    )) {
                 // TIKA-704: OLE 2.0 embedded non-Office document?
                 //TODO: figure out if the equivalent of OLE 1.0's
                 //getCommand() and getFileName() exist for OLE 2.0 to populate
                 //TikaCoreProperties.ORIGINAL_RESOURCE_NAME
-                stream = TikaInputStream.get(
-                        fs.createDocumentInputStream("CONTENTS"));
+                if (root.hasEntry("CONTENTS")) {
+                    stream = TikaInputStream.get(
+                            fs.createDocumentInputStream("CONTENTS"));
+                } else if (root.hasEntry("Package")) {
+                    //TIKA-2588
+                    stream = TikaInputStream.get(
+                            fs.createDocumentInputStream("Package"));
+                } else {
+                    throw new IllegalStateException("Shouldn't ever arrive here; please open a ticket on our jira");
+                }
                 if (embeddedExtractor.shouldParseEmbedded(metadata)) {
                     embeddedExtractor.parseEmbedded(
                             stream, new EmbeddedContentHandler(handler),
@@ -318,7 +331,7 @@ public abstract class AbstractOOXMLExtractor implements OOXMLExtractor {
                 Ole10Native ole =
                         Ole10Native.createFromEmbeddedOleObject(fs);
                 if (ole.getLabel() != null) {
-                    metadata.set(Metadata.RESOURCE_NAME_KEY, ole.getLabel());
+                    metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, ole.getLabel());
                 }
                 if (ole.getCommand() != null) {
                     metadata.add(TikaCoreProperties.ORIGINAL_RESOURCE_NAME, ole.getCommand());
@@ -362,12 +375,12 @@ public abstract class AbstractOOXMLExtractor implements OOXMLExtractor {
     protected void handleEmbeddedFile(PackagePart part, ContentHandler handler, String rel)
             throws SAXException, IOException {
         Metadata metadata = new Metadata();
-        metadata.set(Metadata.EMBEDDED_RELATIONSHIP_ID, rel);
+        metadata.set(TikaCoreProperties.EMBEDDED_RELATIONSHIP_ID, rel);
 
         // Get the name
         String name = part.getPartName().getName();
         metadata.set(
-                Metadata.RESOURCE_NAME_KEY,
+                TikaCoreProperties.RESOURCE_NAME_KEY,
                 name.substring(name.lastIndexOf('/') + 1));
 
         // Get the content type

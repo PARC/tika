@@ -1,4 +1,46 @@
-Release 1.17 - December 8, 2017
+Release 2.0.0 - ???
+   BREAKING CHANGES in 2.0.0
+
+   * Remove deprecated Metadata keys/properties (TIKA-1974).
+
+   Other changes
+
+   * Allow for RFC822 detection for files starting with "dkim-"
+     and/or "x-" via Andreas Meier (TIKA-2578 and TIKA-2587)
+
+   * Extract xlsx files embedded in OLE objects within PPT and PPTX
+     via Brian McColgan (TIKA-2588).
+
+   * Extract files embedded in HTML and javascript inside HTML
+     that are stored in the Data URI scheme (TIKA-2563).
+
+   * Extract text from grouped text boxes in PPT (TIKA-2569).
+
+   * Extract language metadata item from PDF files via Matt Sheppard (TIKA-2559)
+
+   * RFC822 with multipart/mixed, first text element should be treated
+     as the main body of the email, not an attachment (TIKA-2547).
+
+   * Swap out com.tdunning:json for com.github.openjson:openjson to avoid
+     jar conflicts (TIKA-2556).
+
+   * No longer hardcode HtmlParser for XML files in tika-server (TIKA-2551).
+
+   * Require Java 8 (TIKA-2553).
+
+   * Add a parser for XPS (TIKA-2524).
+
+   * Mime magic for Dolby Digital AC3 and EAC3 files
+
+   * Fixed bug where TesseractOCRParser ignores configured ImageMagickPath,
+     and set rotation script to ignore Python warnings (TIKA-2509)
+
+   * Upgrade geo-apis to 3.0.1 (TIKA-2535)
+
+   * Mime definition and magic improvements for text-based programming
+     and config formats (TIKA-2554, TIKA-2567, TIKA-1141)
+
+Release 1.17 - 12/8/2017
 
   ***NOTE: THIS IS THE LAST VERSION OF TIKA THAT WILL RUN
      ON Java 7.  The next versions will require Java 8***

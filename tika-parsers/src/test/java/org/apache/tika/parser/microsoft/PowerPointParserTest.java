@@ -19,6 +19,7 @@ package org.apache.tika.parser.microsoft;
 import static org.junit.Assert.assertEquals;
 
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -31,6 +32,7 @@ import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.RecursiveParserWrapper;
 import org.apache.tika.sax.BodyContentHandler;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.xml.sax.ContentHandler;
 
@@ -49,7 +51,6 @@ public class PowerPointParserTest extends TikaTest {
                     metadata.get(Metadata.CONTENT_TYPE));
             assertEquals("Sample Powerpoint Slide", metadata.get(TikaCoreProperties.TITLE));
             assertEquals("Keith Bennett", metadata.get(TikaCoreProperties.CREATOR));
-            assertEquals("Keith Bennett", metadata.get(Metadata.AUTHOR));
             String content = handler.toString();
             assertContains("Sample Powerpoint Slide", content);
             assertContains("Powerpoint X for Mac", content);
@@ -64,7 +65,7 @@ public class PowerPointParserTest extends TikaTest {
         assertContains("<p>[1] This is a footnote.", xml);
         assertContains("<p>This is the header text.</p>", xml);
         assertContains("<p>This is the footer text.</p>", xml);
-        assertContains("<p>Here is a text box</p>", xml);
+        assertContainsCount("<p>Here is a text box</p>", xml, 1);
         assertContains("<p>Bold ", xml);
         assertContains("italic underline superscript subscript", xml);
         assertContains("underline", xml);
@@ -97,16 +98,20 @@ public class PowerPointParserTest extends TikaTest {
                 assertContains("Row " + row + " Col " + col, xml);
             }
         }
+
         assertContains("Keyword1 Keyword2", xml);
         assertEquals("Keyword1 Keyword2",
-                     metadata.get(TikaCoreProperties.KEYWORDS));
+                metadata.get(Office.KEYWORDS));
+        assertContains("Keyword1 Keyword2",
+                Arrays.asList(metadata.getValues(TikaCoreProperties.SUBJECT)));
+
 
         assertContains("Subject is here", xml);
+        assertContains("Subject is here",
+                Arrays.asList(metadata.getValues(TikaCoreProperties.SUBJECT)));
         assertEquals("Subject is here",
                      metadata.get(OfficeOpenXMLCore.SUBJECT));
-        // TODO: Remove subject in Tika 2.0
-        assertEquals("Subject is here",
-                     metadata.get(Metadata.SUBJECT));
+
 
         assertContains("Suddenly some Japanese text:", xml);
         // Special version of (GHQ)
@@ -201,11 +206,8 @@ public class PowerPointParserTest extends TikaTest {
         assertEquals("application/vnd.ms-powerpoint", metadata.get(Metadata.CONTENT_TYPE));
         assertEquals("JOUVIN ETIENNE", metadata.get(TikaCoreProperties.CREATOR));
         assertEquals("EJ04325S", metadata.get(TikaCoreProperties.MODIFIER));
-        assertEquals("EJ04325S", metadata.get(Metadata.LAST_AUTHOR));
         assertEquals("2011-08-22T13:32:58Z", metadata.get(TikaCoreProperties.MODIFIED));
-        assertEquals("2011-08-22T13:32:58Z", metadata.get(Metadata.DATE));
         assertEquals("2011-08-22T13:30:53Z", metadata.get(TikaCoreProperties.CREATED));
-        assertEquals("2011-08-22T13:30:53Z", metadata.get(Metadata.CREATION_DATE));
         assertEquals("1", metadata.get(Office.SLIDE_COUNT));
         assertEquals("3", metadata.get(Office.WORD_COUNT));
         assertEquals("Test extraction properties pptx", metadata.get(TikaCoreProperties.TITLE));
@@ -246,9 +248,9 @@ public class PowerPointParserTest extends TikaTest {
     public void testEmbeddedPDF() throws Exception {
         List<Metadata> metadataList = getRecursiveMetadata("testPPT_EmbeddedPDF.ppt");
         assertContains("Apache Tika project", metadataList.get(1).get(RecursiveParserWrapper.TIKA_CONTENT));
-        assertEquals("3.pdf", metadataList.get(1).get(Metadata.RESOURCE_NAME_KEY));
+        assertEquals("3.pdf", metadataList.get(1).get(TikaCoreProperties.RESOURCE_NAME_KEY));
         assertContains("Hello World", metadataList.get(2).get(RecursiveParserWrapper.TIKA_CONTENT));
-        assertEquals("4.pdf", metadataList.get(2).get(Metadata.RESOURCE_NAME_KEY));
+        assertEquals("4.pdf", metadataList.get(2).get(TikaCoreProperties.RESOURCE_NAME_KEY));
     }
 
     @Test
@@ -292,5 +294,66 @@ public class PowerPointParserTest extends TikaTest {
     @Test(expected = EncryptedDocumentException.class)
     public void testEncrypted() throws Exception {
         getXML("testPPT_protected_passtika.ppt");
+    }
+
+    @Test
+    public void testGroups() throws Exception {
+        List<Metadata> metadataList = getRecursiveMetadata("testPPT_groups.ppt");
+        assertEquals(3, metadataList.size());
+        String content =  metadataList.get(0).get(RecursiveParserWrapper.TIKA_CONTENT);
+        //this tests that we're ignoring text shapes at depth=0
+        //i.e. POI has already included them in the slide's getTextParagraphs()
+        assertContainsCount("Text box1", content, 1);
+
+
+        //the WordArt and text box count tests will fail
+        //if this content is available via getTextParagraphs() of the slide in POI
+        //i.e. when POI is fixed, these tests will fail, and
+        //we'll have to remove the workaround in HSLFExtractor's extractGroupText(...)
+        assertContainsCount("WordArt1", content, 1);
+        assertContainsCount("WordArt2", content, 1);
+        assertContainsCount("Ungrouped text box", content, 1);//should only be 1
+        assertContains("Text box2", content);
+        assertContains("Text box3", content);
+        assertContains("Text box4", content);
+        assertContains("Text box5", content);
+
+        //see below -- need to extract hyperlinks
+        assertContains("tika", content);
+        assertContains("MyTitle", content);
+
+        assertEquals("/embedded-1",
+                metadataList.get(1).get(RecursiveParserWrapper.EMBEDDED_RESOURCE_PATH));
+
+        assertEquals("/embedded-2",
+                metadataList.get(2).get(RecursiveParserWrapper.EMBEDDED_RESOURCE_PATH));
+
+    }
+
+    @Ignore("until we add smart text extraction")
+    @Test
+    public void testSmartArtText() throws Exception {
+        String content = getXML("testPPT_groups.ppt").xml;
+        assertContains("smart1", content);
+    }
+
+    @Ignore("until we fix hyperlink extraction from text boxes")
+    @Test
+    public void testHyperlinksInTextBoxes() throws Exception {
+        String content = getXML("testPPT_groups.ppt").xml;
+        assertContains("href=\"http://tika.apache.org", content);
+    }
+
+    @Test
+    public void testEmbeddedXLSInOLEObject() throws Exception {
+        List<Metadata> metadataList = getRecursiveMetadata("testPPT_oleWorkbook.ppt");
+        debug(metadataList);
+        assertEquals(3, metadataList.size());
+        Metadata xlsx = metadataList.get(1);
+        assertContains("<h1>Sheet1</h1>", xlsx.get(RecursiveParserWrapper.TIKA_CONTENT));
+        assertContains("<td>1</td>", xlsx.get(RecursiveParserWrapper.TIKA_CONTENT));
+        assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                xlsx.get(Metadata.CONTENT_TYPE));
+
     }
 }

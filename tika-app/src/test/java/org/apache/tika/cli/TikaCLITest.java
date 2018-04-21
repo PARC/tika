@@ -159,9 +159,9 @@ public class TikaCLITest {
         //test legacy alphabetic sort of keys
         int enc = json.indexOf("\"Content-Encoding\"");
         int fb = json.indexOf("fb:admins");
-        int title = json.indexOf("\"title\"");
+        int title = json.indexOf("\"dc:title\"");
         assertTrue(enc > -1 && fb > -1 && enc < fb);
-        assertTrue (fb > -1 && title > -1 && fb < title);
+        assertTrue (fb > -1 && title > -1 && fb > title);
         assertTrue(json.contains("\"X-TIKA:digest:MD2\":"));
     }
 
@@ -183,9 +183,9 @@ public class TikaCLITest {
         //test legacy alphabetic sort of keys
         int enc = json.indexOf("\"Content-Encoding\"");
         int fb = json.indexOf("fb:admins");
-        int title = json.indexOf("\"title\"");
+        int title = json.indexOf("\"dc:title\"");
         assertTrue(enc > -1 && fb > -1 && enc < fb);
-        assertTrue (fb > -1 && title > -1 && fb < title);
+        assertTrue (fb > -1 && title > -1 && fb > title);
     }
 
     /**
@@ -282,6 +282,34 @@ public class TikaCLITest {
             FileUtils.deleteDirectory(tempFile);
         }
     }
+
+    @Test
+    public void testExtractTgz() throws Exception {
+        //TIKA-2564
+        File tempFile = File.createTempFile("tika-test-", "");
+        tempFile.delete();
+        tempFile.mkdir();
+
+        try {
+            String[] params = {"--extract-dir="+tempFile.getAbsolutePath(),"-z", resourcePrefix + "/test-documents.tgz"};
+
+            TikaCLI.main(params);
+
+            StringBuffer allFiles = new StringBuffer();
+            for (String f : tempFile.list()) {
+                if (allFiles.length() > 0) allFiles.append(" : ");
+                allFiles.append(f);
+            }
+
+            File expectedTAR = new File(tempFile, "test-documents.tar");
+
+            assertExtracted(expectedTAR, allFiles.toString());
+        } finally {
+            FileUtils.deleteDirectory(tempFile);
+        }
+    }
+
+
     protected static void assertExtracted(File f, String allFiles) {
 
         assertTrue(
@@ -398,12 +426,10 @@ public class TikaCLITest {
         String[] params = new String[]{"-m", "-J", "-r", resourcePrefix+"test_recursive_embedded.docx"};
         TikaCLI.main(params);
         String content = outContent.toString(UTF_8.name());
-        assertTrue(content.contains("[\n" +
-                "  {\n" +
-                "    \"Application-Name\": \"Microsoft Office Word\",\n" +
-                "    \"Application-Version\": \"15.0000\",\n" +
-                "    \"Character Count\": \"28\",\n" +
-                "    \"Character-Count-With-Spaces\": \"31\","));
+        assertTrue(content.contains(
+                "\"extended-properties:AppVersion\": \"15.0000\","));
+        assertTrue(content.contains(
+                "\"extended-properties:Application\": \"Microsoft Office Word\","));
         assertTrue(content.contains("\"X-TIKA:embedded_resource_path\": \"/embed1.zip\""));
         assertFalse(content.contains("X-TIKA:content"));
     }

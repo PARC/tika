@@ -33,6 +33,7 @@ import org.apache.tika.exception.EncryptedDocumentException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.Office;
 import org.apache.tika.metadata.OfficeOpenXMLCore;
+import org.apache.tika.metadata.OfficeOpenXMLExtended;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
@@ -180,7 +181,6 @@ public class SXSLFExtractorTest extends TikaTest {
                         metadata.get(Metadata.CONTENT_TYPE));
                 assertEquals("Attachment Test", metadata.get(TikaCoreProperties.TITLE));
                 assertEquals("Rajiv", metadata.get(TikaCoreProperties.CREATOR));
-                assertEquals("Rajiv", metadata.get(Metadata.AUTHOR));
 
                 String content = handler.toString();
                 // Theme files don't have the text in them
@@ -249,7 +249,6 @@ public class SXSLFExtractorTest extends TikaTest {
                             metadata.get(Metadata.CONTENT_TYPE));
                     assertEquals("Attachment Test", metadata.get(TikaCoreProperties.TITLE));
                     assertEquals("Rajiv", metadata.get(TikaCoreProperties.CREATOR));
-                    assertEquals("Rajiv", metadata.get(Metadata.AUTHOR));
 
                 }
 
@@ -279,7 +278,7 @@ public class SXSLFExtractorTest extends TikaTest {
 
             Parser parser = new AutoDetectParser();
             Metadata metadata = new Metadata();
-            metadata.set(Metadata.RESOURCE_NAME_KEY, filename);
+            metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, filename);
             ContentHandler handler = new BodyContentHandler();
 
             try (InputStream input = getResourceAsStream("/test-documents/" + filename)) {
@@ -337,14 +336,9 @@ public class SXSLFExtractorTest extends TikaTest {
 
         assertContains("Keyword1 Keyword2", xml);
         assertEquals("Keyword1 Keyword2",
-                metadata.get(Metadata.KEYWORDS));
+                metadata.get(Office.KEYWORDS));
 
         assertContains("Subject is here", xml);
-        // TODO: Remove subject in Tika 2.0
-        assertEquals("Subject is here",
-                metadata.get(Metadata.SUBJECT));
-        assertEquals("Subject is here",
-                metadata.get(OfficeOpenXMLCore.SUBJECT));
 
         assertContains("Suddenly some Japanese text:", xml);
         // Special version of (GHQ)
@@ -407,11 +401,8 @@ public class SXSLFExtractorTest extends TikaTest {
                 metadata.get(Metadata.CONTENT_TYPE));
         assertEquals("JOUVIN ETIENNE", metadata.get(TikaCoreProperties.CREATOR));
         assertEquals("EJ04325S", metadata.get(TikaCoreProperties.MODIFIER));
-        assertEquals("EJ04325S", metadata.get(Metadata.LAST_AUTHOR));
         assertEquals("2011-08-22T13:30:53Z", metadata.get(TikaCoreProperties.CREATED));
-        assertEquals("2011-08-22T13:30:53Z", metadata.get(Metadata.CREATION_DATE));
         assertEquals("2011-08-22T13:32:49Z", metadata.get(TikaCoreProperties.MODIFIED));
-        assertEquals("2011-08-22T13:32:49Z", metadata.get(Metadata.DATE));
         assertEquals("1", metadata.get(Office.SLIDE_COUNT));
         assertEquals("3", metadata.get(Office.WORD_COUNT));
         assertEquals("Test extraction properties pptx", metadata.get(TikaCoreProperties.TITLE));
@@ -591,4 +582,31 @@ public class SXSLFExtractorTest extends TikaTest {
         assertEquals("image/jpeg", metadataList.get(3).get(Metadata.CONTENT_TYPE));
 
     }
+
+    @Test
+    public void testPPTXGroups() throws Exception {
+        List<Metadata> metadataList = getRecursiveMetadata("testPPT_groups.pptx", parseContext);
+        assertEquals(3, metadataList.size());
+        String content = metadataList.get(0).get(RecursiveParserWrapper.TIKA_CONTENT);
+        assertContains("WordArt1", content);
+        assertContains("WordArt2", content);
+        assertContainsCount("Ungrouped text box", content, 1);//should only be 1
+        assertContains("Text box1", content);
+        assertContains("Text box2", content);
+        assertContains("Text box3", content);
+        assertContains("Text box4", content);
+        assertContains("Text box5", content);
+
+
+        assertContains("href=\"http://tika.apache.org", content);
+        assertContains("smart1", content);
+        assertContains("MyTitle", content);
+
+        assertEquals("/image1.jpg",
+                metadataList.get(1).get(RecursiveParserWrapper.EMBEDDED_RESOURCE_PATH));
+
+        assertEquals("/thumbnail.jpeg",
+                metadataList.get(2).get(RecursiveParserWrapper.EMBEDDED_RESOURCE_PATH));
+    }
+
 }
